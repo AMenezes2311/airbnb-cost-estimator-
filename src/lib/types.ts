@@ -12,6 +12,7 @@ export interface Trip {
   duvets: number;
   cleanings: number;
   apartment: ApartmentId;
+  user_id: string;
   created_at: string;
 }
 

@@ -73,9 +73,18 @@ export function useTrips() {
 
     try {
       setError(null);
+
+      // Get current user
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Usuário não autenticado");
+      }
+
       const tripsTable = supabase.from("trips") as any;
       const { data, error: insertError } = await tripsTable
-        .insert(input)
+        .insert({ ...input, user_id: user.id })
         .select("*")
         .single();
 

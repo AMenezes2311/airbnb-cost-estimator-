@@ -11,8 +11,8 @@ export interface Database {
     Tables: {
       trips: {
         Row: Trip;
-        Insert: Omit<Trip, "id" | "created_at">;
-        Update: Partial<Omit<Trip, "id" | "created_at">>;
+        Insert: Omit<Trip, "id" | "created_at"> & { user_id: string };
+        Update: Partial<Omit<Trip, "id" | "created_at" | "user_id">>;
         Relationships: [];
       };
     };
