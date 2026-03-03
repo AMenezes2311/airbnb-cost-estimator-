@@ -44,7 +44,7 @@ export default function TripList({ trips, onDelete, onEdit }: TripListProps) {
               <th className="px-4 py-3">Check-out</th>
               <th className="px-4 py-3">Hóspedes totais</th>
               <th className="px-4 py-3">Mantas</th>
-              <th className="px-4 py-3">Noites</th>
+              <th className="px-4 py-3">Limpezas</th>
               <th className="px-4 py-3">Custo total</th>
               <th className="px-4 py-3">Ações</th>
             </tr>
@@ -70,7 +70,7 @@ export default function TripList({ trips, onDelete, onEdit }: TripListProps) {
                 </td>
                 <td className="px-4 py-3 text-gray-900">{trip.guests}</td>
                 <td className="px-4 py-3 text-gray-900">{trip.duvets}</td>
-                <td className="px-4 py-3 text-gray-900">{trip.nights}</td>
+                <td className="px-4 py-3 text-gray-900">{trip.cleanings}</td>
                 <td className="px-4 py-3 font-semibold text-gray-900">
                   {formatCurrency(trip.total_cost)}
                 </td>
