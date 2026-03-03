@@ -110,7 +110,16 @@ export function addCalculationsToTrip(trip: Trip): TripWithCalculations {
     trip.cleanings,
   );
   const duvet_cost = calculateDuvetCost(trip.duvets, trip.cleanings);
-  const total_cost = Math.round((estimated_cost + duvet_cost) * 100) / 100;
+  let total_cost = Math.round((estimated_cost + duvet_cost) * 100) / 100;
+  console.log("this is the current apartment:", trip.apartment);
+
+  if (trip.apartment === "A407") {
+    let cleaningCost = 120 * trip.cleanings;
+    total_cost += cleaningCost;
+  } else {
+    let cleaningCost = 70 * trip.cleanings;
+    total_cost += cleaningCost;
+  }
 
   return {
     ...trip,
