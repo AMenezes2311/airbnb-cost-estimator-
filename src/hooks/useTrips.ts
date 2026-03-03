@@ -2,10 +2,10 @@
  * Hook central responsável por persistir estadias no Supabase e recalcular totais.
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Trip, CreateTripInput, TripWithCalculations } from "@/lib/types";
 import { addCalculationsToTrip } from "@/lib/calculations";
-import { getSupabaseClient, isSupabaseConfigured } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase-browser";
 
 export function useTrips() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -14,6 +14,14 @@ export function useTrips() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const supabase = useMemo(() => {
+    try {
+      return createClient();
+    } catch {
+      return null;
+    }
+  }, []);
 
   const recalculate = useCallback(() => {
     const enriched = trips
@@ -31,8 +39,6 @@ export function useTrips() {
 
   useEffect(() => {
     const loadTrips = async () => {
-      const supabase = getSupabaseClient();
-
       if (!supabase) {
         setError(
           "Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY em .env.local.",
@@ -43,8 +49,8 @@ export function useTrips() {
 
       try {
         setError(null);
-        const tripsTable = supabase.from("trips") as any;
-        const { data, error: fetchError } = await tripsTable
+        const { data, error: fetchError } = await supabase
+          .from("trips")
           .select("*")
           .order("created_at", { ascending: false });
 
@@ -59,11 +65,9 @@ export function useTrips() {
     };
 
     loadTrips();
-  }, []);
+  }, [supabase]);
 
   const addTrip = async (input: CreateTripInput) => {
-    const supabase = getSupabaseClient();
-
     if (!supabase) {
       const message =
         "Supabase não configurado. Verifique o arquivo .env.local.";
@@ -82,8 +86,8 @@ export function useTrips() {
         throw new Error("Usuário não autenticado");
       }
 
-      const tripsTable = supabase.from("trips") as any;
-      const { data, error: insertError } = await tripsTable
+      const { data, error: insertError } = await supabase
+        .from("trips")
         .insert({ ...input, user_id: user.id })
         .select("*")
         .single();
@@ -99,8 +103,6 @@ export function useTrips() {
   };
 
   const deleteTrip = async (id: string) => {
-    const supabase = getSupabaseClient();
-
     if (!supabase) {
       const message =
         "Supabase não configurado. Verifique o arquivo .env.local.";
@@ -110,8 +112,10 @@ export function useTrips() {
 
     try {
       setError(null);
-      const tripsTable = supabase.from("trips") as any;
-      const { error: deleteError } = await tripsTable.delete().eq("id", id);
+      const { error: deleteError } = await supabase
+        .from("trips")
+        .delete()
+        .eq("id", id);
 
       if (deleteError) throw deleteError;
 
@@ -124,8 +128,6 @@ export function useTrips() {
   };
 
   const updateTrip = async (id: string, input: CreateTripInput) => {
-    const supabase = getSupabaseClient();
-
     if (!supabase) {
       const message =
         "Supabase não configurado. Verifique o arquivo .env.local.";
@@ -135,8 +137,8 @@ export function useTrips() {
 
     try {
       setError(null);
-      const tripsTable = supabase.from("trips") as any;
-      const { data, error: updateError } = await tripsTable
+      const { data, error: updateError } = await supabase
+        .from("trips")
         .update(input)
         .eq("id", id)
         .select("*")
@@ -158,7 +160,7 @@ export function useTrips() {
     trips: tripsWithCalcs,
     loading,
     error,
-    isSupabaseConfigured,
+    isSupabaseConfigured: Boolean(supabase),
     addTrip,
     updateTrip,
     deleteTrip,
