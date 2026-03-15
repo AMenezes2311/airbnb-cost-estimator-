@@ -169,7 +169,10 @@ export default function Home() {
           </div>
         )}
 
-        <TripForm onSubmit={handleCreateTrip} onImageSubmit={handleImageCreateTrip} />
+        <TripForm
+          onSubmit={handleCreateTrip}
+          onImageSubmit={handleImageCreateTrip}
+        />
 
         {editingTrip && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
@@ -192,8 +195,11 @@ export default function Home() {
                   Informar mantas
                 </h2>
                 <p className="text-sm text-gray-600">
-                  A estadia foi registrada. Informe agora o número de mantas para{" "}
-                  {getApartmentLabel(duvetModalTrip.apartment)}.
+                  A estadia foi registrada. Informe agora o número de mantas
+                  para {getApartmentLabel(duvetModalTrip.apartment)}.
+                </p>
+                <p className="text-sm text-gray-600">
+                  Sua reserva tem um total de {duvetModalTrip.guests} pessoas.
                 </p>
               </div>
 

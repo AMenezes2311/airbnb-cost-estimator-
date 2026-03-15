@@ -164,47 +164,92 @@ function parseCheckDatesByLabels(
   return { checkIn, checkOut };
 }
 
-function parseAdults(normalizedText: string): number | null {
-  const patterns = [
+interface GuestCounts {
+  adults: number;
+  children: number;
+  babies: number;
+}
+
+function parseGuests(normalizedText: string): GuestCounts | null {
+  let adults = 0;
+  let children = 0;
+  let babies = 0;
+
+  // Patterns for each type
+  const adultPatterns = [
     /(\d{1,2})\s*adult(?:o|os|a|as)?\b/i,
     /adult(?:o|os|a|as)?\s*[:\-]?\s*(\d{1,2})\b/i,
     /(\d{1,2})\s*ad\w{2,8}\b/i,
     /(\d{1,2})\s*hosped(?:e|es)?\b/i,
   ];
+  const childPatterns = [
+    /(\d{1,2})\s*crianc(?:a|as)?\b/i,
+    /crianc(?:a|as)?\s*[:\-]?\s*(\d{1,2})\b/i,
+  ];
+  const babyPatterns = [
+    /(\d{1,2})\s*beb(?:e|es)?\b/i,
+    /beb(?:e|es)?\s*[:\-]?\s*(\d{1,2})\b/i,
+  ];
 
-  for (const pattern of patterns) {
+  for (const pattern of adultPatterns) {
     const match = normalizedText.match(pattern);
-    if (!match) continue;
-
-    const guests = Number(match[1]);
-    if (!Number.isNaN(guests) && guests >= 1) {
-      return guests;
+    if (match) {
+      const n = Number(match[1]);
+      if (!Number.isNaN(n) && n >= 1) {
+        adults = n;
+        break;
+      }
     }
   }
-
-  const lines = normalizedText.split("\n");
-  const hostLineIndex = lines.findIndex((line) => /hosped/.test(line));
-  if (hostLineIndex >= 0) {
-    const fallbackLines = [
-      lines[hostLineIndex],
-      lines[hostLineIndex + 1],
-      lines[hostLineIndex + 2],
-    ].filter(Boolean);
-
-    for (const line of fallbackLines) {
-      if (/crianc/.test(line) && !/adult|hosped/.test(line)) continue;
-
-      const numberMatch = line.match(/(\d{1,2})/);
-      if (!numberMatch) continue;
-
-      const guests = Number(numberMatch[1]);
-      if (!Number.isNaN(guests) && guests >= 1) {
-        return guests;
+  for (const pattern of childPatterns) {
+    const match = normalizedText.match(pattern);
+    if (match) {
+      const n = Number(match[1]);
+      if (!Number.isNaN(n) && n >= 1) {
+        children = n;
+        break;
+      }
+    }
+  }
+  for (const pattern of babyPatterns) {
+    const match = normalizedText.match(pattern);
+    if (match) {
+      const n = Number(match[1]);
+      if (!Number.isNaN(n) && n >= 1) {
+        babies = n;
+        break;
       }
     }
   }
 
-  return null;
+  // Fallback for adults if not found
+  if (adults === 0) {
+    const lines = normalizedText.split("\n");
+    const hostLineIndex = lines.findIndex((line) => /hosped/.test(line));
+    if (hostLineIndex >= 0) {
+      const fallbackLines = [
+        lines[hostLineIndex],
+        lines[hostLineIndex + 1],
+        lines[hostLineIndex + 2],
+      ].filter(Boolean);
+
+      for (const line of fallbackLines) {
+        if (/crianc/.test(line) && !/adult|hosped/.test(line)) continue;
+        const numberMatch = line.match(/(\d{1,2})/);
+        if (!numberMatch) continue;
+        const n = Number(numberMatch[1]);
+        if (!Number.isNaN(n) && n >= 1) {
+          adults = n;
+          break;
+        }
+      }
+    }
+  }
+
+  if (adults === 0 && children === 0 && babies === 0) {
+    return null;
+  }
+  return { adults, children, babies };
 }
 
 function parseApartment(normalizedText: string): ApartmentId | null {
@@ -377,7 +422,10 @@ export async function extractTripFromReservationImage(
     const dates =
       parseCheckDates(normalizedText) ??
       parseCheckDatesFromNumeric(normalizedText);
-    const guests = parseAdults(normalizedText);
+    const guestCounts = parseGuests(normalizedText);
+    const guests = guestCounts
+      ? guestCounts.adults + guestCounts.children + guestCounts.babies
+      : NaN;
     const apartment = parseApartment(normalizedText);
 
     if (!dates) {
@@ -386,9 +434,9 @@ export async function extractTripFromReservationImage(
       );
     }
 
-    if (!guests) {
+    if (!guestCounts) {
       throw new Error(
-        "Não foi possível identificar o número de adultos na imagem.",
+        "Não foi possível identificar o número de hóspedes na imagem.",
       );
     }
 
