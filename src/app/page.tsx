@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import TripForm from "@/components/TripForm";
 import TripList from "@/components/TripList";
@@ -8,7 +8,7 @@ import TotalsSection from "@/components/TotalsSection";
 import { useTrips } from "@/hooks/useTrips";
 import { useAuth } from "@/hooks/useAuth";
 import { calculateTotals, getApartmentLabel } from "@/lib/calculations";
-import { TripWithCalculations, CreateTripInput } from "@/lib/types";
+import { Trip, TripWithCalculations, CreateTripInput } from "@/lib/types";
 
 export default function Home() {
   const {
@@ -26,6 +26,11 @@ export default function Home() {
     null,
   );
   const [sortMode, setSortMode] = useState<"date" | "apartment">("date");
+  const [duvetModalTrip, setDuvetModalTrip] = useState<Trip | null>(null);
+  const [duvetValue, setDuvetValue] = useState("");
+  const [duvetError, setDuvetError] = useState<string | null>(null);
+  const [savingDuvets, setSavingDuvets] = useState(false);
+  const duvetInputRef = useRef<HTMLInputElement>(null);
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,6 +38,12 @@ export default function Home() {
     router.refresh();
   };
   const totals = calculateTotals(trips);
+
+  useEffect(() => {
+    if (!duvetModalTrip) return;
+    duvetInputRef.current?.focus();
+  }, [duvetModalTrip]);
+
   const sortedTrips = useMemo(() => {
     const copy = [...trips];
     if (sortMode === "date") {
@@ -51,13 +62,21 @@ export default function Home() {
     });
   }, [trips, sortMode]);
 
-  const handleSubmit = async (input: CreateTripInput) => {
-    if (editingTrip) {
-      await updateTrip(editingTrip.id, input);
-      setEditingTrip(null);
-      return;
-    }
+  const handleCreateTrip = async (input: CreateTripInput) => {
     await addTrip(input);
+  };
+
+  const handleImageCreateTrip = async (input: CreateTripInput) => {
+    const createdTrip = await addTrip(input);
+    setDuvetValue("");
+    setDuvetError(null);
+    setDuvetModalTrip(createdTrip);
+  };
+
+  const handleEditSubmit = async (input: CreateTripInput) => {
+    if (!editingTrip) return;
+    await updateTrip(editingTrip.id, input);
+    setEditingTrip(null);
   };
 
   const handleEditSelection = (trip: TripWithCalculations) => {
@@ -65,6 +84,43 @@ export default function Home() {
   };
 
   const handleCancelEdit = () => setEditingTrip(null);
+
+  const handleDuvetSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!duvetModalTrip) return;
+
+    const parsedValue = Number(duvetValue || 0);
+    if (Number.isNaN(parsedValue) || parsedValue < 0) {
+      setDuvetError("O número de mantas não pode ser negativo.");
+      return;
+    }
+
+    try {
+      setSavingDuvets(true);
+      setDuvetError(null);
+      await updateTrip(duvetModalTrip.id, {
+        check_in: duvetModalTrip.check_in,
+        check_out: duvetModalTrip.check_out,
+        guests: duvetModalTrip.guests,
+        duvets: parsedValue,
+        cleanings: duvetModalTrip.cleanings,
+        apartment: duvetModalTrip.apartment,
+      });
+      setDuvetModalTrip(null);
+      setDuvetValue("");
+    } catch {
+      setDuvetError("Não foi possível salvar o número de mantas.");
+    } finally {
+      setSavingDuvets(false);
+    }
+  };
+
+  const handleCloseDuvetModal = () => {
+    if (savingDuvets) return;
+    setDuvetModalTrip(null);
+    setDuvetValue("");
+    setDuvetError(null);
+  };
 
   if (loading) {
     return (
@@ -113,12 +169,75 @@ export default function Home() {
           </div>
         )}
 
-        <TripForm
-          onSubmit={handleSubmit}
-          isEditing={Boolean(editingTrip)}
-          editingTrip={editingTrip ?? undefined}
-          onCancelEdit={handleCancelEdit}
-        />
+        <TripForm onSubmit={handleCreateTrip} onImageSubmit={handleImageCreateTrip} />
+
+        {editingTrip && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+            <div className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl">
+              <TripForm
+                onSubmit={handleEditSubmit}
+                isEditing
+                editingTrip={editingTrip}
+                onCancelEdit={handleCancelEdit}
+              />
+            </div>
+          </div>
+        )}
+
+        {duvetModalTrip && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+            <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+              <div className="space-y-2">
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Informar mantas
+                </h2>
+                <p className="text-sm text-gray-600">
+                  A estadia foi registrada. Informe agora o número de mantas para{" "}
+                  {getApartmentLabel(duvetModalTrip.apartment)}.
+                </p>
+              </div>
+
+              <form onSubmit={handleDuvetSubmit} className="mt-5 space-y-4">
+                <label className="flex flex-col gap-1 text-sm font-medium text-gray-700">
+                  Número de mantas
+                  <input
+                    ref={duvetInputRef}
+                    type="number"
+                    min={0}
+                    value={duvetValue}
+                    onChange={(e) => setDuvetValue(e.target.value)}
+                    placeholder="0"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                </label>
+
+                {duvetError && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {duvetError}
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleCloseDuvetModal}
+                    disabled={savingDuvets}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Agora não
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingDuvets}
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+                  >
+                    {savingDuvets ? "Salvando..." : "Salvar mantas"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
         {trips.length > 0 && <TotalsSection totals={totals} />}
 

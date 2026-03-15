@@ -4,13 +4,15 @@ import { useState, useEffect, FormEvent } from "react";
 import {
   ApartmentId,
   CreateTripInput,
+  Trip,
   TripWithCalculations,
 } from "@/lib/types";
 import { validateTripDates, APARTMENT_OPTIONS } from "@/lib/calculations";
 import { extractTripFromReservationImage } from "@/lib/reservationImageParser";
 
 interface TripFormProps {
-  onSubmit: (trip: CreateTripInput) => Promise<void>;
+  onSubmit: (trip: CreateTripInput) => Promise<Trip | void>;
+  onImageSubmit?: (trip: CreateTripInput) => Promise<Trip | void>;
   isEditing?: boolean;
   editingTrip?: TripWithCalculations | null;
   onCancelEdit?: () => void;
@@ -18,6 +20,7 @@ interface TripFormProps {
 
 export default function TripForm({
   onSubmit,
+  onImageSubmit,
   isEditing = false,
   editingTrip,
   onCancelEdit,
@@ -132,7 +135,10 @@ export default function TripForm({
       setDuvets(String(parsedTrip.duvets));
       setCleanings(String(parsedTrip.cleanings));
 
-      await onSubmit(parsedTrip);
+      await (onImageSubmit ?? onSubmit)({
+        ...parsedTrip,
+        duvets: 0,
+      });
       resetForm();
     } catch (err) {
       const message =
@@ -233,7 +239,7 @@ export default function TripForm({
             min={0}
             value={duvets}
             onChange={(e) => setDuvets(e.target.value)}
-            placeholder="Ex.: 1"
+            placeholder="0"
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
             required
           />

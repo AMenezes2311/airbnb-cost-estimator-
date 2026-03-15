@@ -67,7 +67,7 @@ export function useTrips() {
     loadTrips();
   }, [supabase]);
 
-  const addTrip = async (input: CreateTripInput) => {
+  const addTrip = async (input: CreateTripInput): Promise<Trip> => {
     if (!supabase) {
       const message =
         "Supabase não configurado. Verifique o arquivo .env.local.";
@@ -95,6 +95,7 @@ export function useTrips() {
       if (insertError) throw insertError;
 
       setTrips((prev) => [data, ...prev]);
+      return data as Trip;
     } catch {
       const message = "Não foi possível salvar a estadia";
       setError(message);
@@ -127,7 +128,7 @@ export function useTrips() {
     }
   };
 
-  const updateTrip = async (id: string, input: CreateTripInput) => {
+  const updateTrip = async (id: string, input: CreateTripInput): Promise<Trip> => {
     if (!supabase) {
       const message =
         "Supabase não configurado. Verifique o arquivo .env.local.";
@@ -149,6 +150,7 @@ export function useTrips() {
       setTrips((prev) =>
         prev.map((trip) => (trip.id === id ? (data as Trip) : trip)),
       );
+      return data as Trip;
     } catch {
       const message = "Não foi possível atualizar a estadia";
       setError(message);
