@@ -47,9 +47,7 @@ function normalizeCompact(value: string): string {
 }
 
 function toIsoDate(day: number, month: number, year: number): string {
-  const date = new Date(year, month, day);
-  const isoString = date.toISOString().slice(0, 10);
-  return isoString;
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 function resolveYear(
