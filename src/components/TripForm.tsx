@@ -249,7 +249,7 @@ export default function TripForm({
           Número de limpezas
           <input
             type="number"
-            min={1}
+            min={0}
             value={cleanings}
             onChange={(e) => setCleanings(e.target.value)}
             placeholder="Ex.: 1"
