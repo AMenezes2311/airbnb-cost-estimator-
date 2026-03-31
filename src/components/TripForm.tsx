@@ -89,8 +89,8 @@ export default function TripForm({
       setError("O número de mantas não pode ser negativo");
       return;
     }
-    if (Number.isNaN(cleaningsNumber) || cleaningsNumber < 1) {
-      setError("Informe pelo menos 1 limpeza");
+    if (Number.isNaN(cleaningsNumber) || cleaningsNumber < 0) {
+      setError("Informe pelo menos 0 limpezas");
       return;
     }
 
